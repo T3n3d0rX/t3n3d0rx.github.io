@@ -4,7 +4,7 @@ title: Mischief - Hack The Box
 date: 2019-01-05
 classes: wide
 header:
-  teaser: /assets/images/htb-writeup-mischief/mischief_logo.png
+  teaser: /assets/images/htb-writeup-photobomb/photobomp.png
 categories:
   - hackthebox
   - infosec
@@ -20,25 +20,15 @@ This blog post is a writeup of the Mischief machine from Hack the Box using the 
 
 ## Linux / 10.10.10.92
 
-![](/assets/images/htb-writeup-mischief/mischief_logo.png)
+![](/assets/images/htb-writeup-photobomb/photobomp.png)
 
-### Summary
+### Técnicas
 ------------------
-- SNMP is enabled and the default `public` SNMP community string is configured
-- Using SNMP, we find that a Python SimpleHTTPServer is running with basic authentication, the credentials are passed as command arguments so we can see those in the snmpwalk
-- The webserver is running on port 3366 and we can log in with the credentials we found
-- There is another set of credentials displayed on the webpage but we don't know what these are for yet
-- Using SNMP, we find there is an IPv6 address configured on the server and nmap shows an Apache server running on port 80
-- We can log in to the webserver with the password we found on the other page, we just have to guess/bruteforce the username which is `administrator`
-- There's a command injection vulnerability on the PHP page that we can exploit to read a `credentials` file in the loki home directory
-- We can log in with SSH as user `loki` now and we see that we are part of the `lxd` group
-- We can priv esc by uploading a container, setting it as privileged and mounting the local filesystem within the container
-- The root.txt flag in /root is a fake one, but doing a find command on the entire filesystem reveals it's real location
-
-### Tools/Blogs used
-
-- [http://docwiki.cisco.com/wiki/How_to_get_IPv6_address_via_SNMP](http://docwiki.cisco.com/wiki/How_to_get_IPv6_address_via_SNMP)
-- [https://dominicbreuker.com/post/htb_calamity/](https://dominicbreuker.com/post/htb_calamity/)
+- Virtual Hosting
+- Web enumeration 
+- Information Leakage - Credentials in Javascript File
+- Abusing Image Download Utility (Command Injection) [RCE]
+- Abusing Sudoers privilege + PATH Hijacking (find command)
 
 ### Detailed steps
 ------------------
