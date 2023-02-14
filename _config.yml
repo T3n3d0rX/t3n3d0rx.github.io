@@ -23,7 +23,7 @@ description              : "Página web personal y HTB Machines!"
 url                      : "https://t3n3d0rx.github.io" # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
 baseurl                  : # the subpath of your site, e.g. "/blog"
 repository               : "slemire/slemire.github.io" # GitHub username/repo-name e.g. "mmistakes/minimal-mistakes"
-logo                     : "/assets/images/logo.png"
+logo                     : "/assets/images/cooltext428766693839990.png"
 teaser                   : # path of fallback teaser image, e.g. "/assets/images/500x300.png"
 breadcrumbs              : true # true, false (default)
 words_per_minute         : 200
@@ -102,7 +102,7 @@ analytics:
 # Site Author
 author:
   name             : "T3n3d0rx"
-  avatar           : "/assets/images/cooltext428766693839990.png"
+  avatar           : "/assets/images/logo.png"
   bio              : "SysAdmin, Cybersecurity enthusiast"
   location         : "Spain"
     #email            : "info@snowscan.io"
