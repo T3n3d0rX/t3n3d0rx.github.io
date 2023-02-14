@@ -1,7 +1,7 @@
 ---
 layout: single
-title: Mischief - Hack The Box
-date: 2019-01-05
+title: Photobomp - Hack The Box
+date: 2023-02-13
 classes: wide
 header:
   teaser: /assets/images/htb-writeup-photobomb/photobomp.png
@@ -11,12 +11,9 @@ categories:
 tags:
   - hackthebox
   - linux
-  - lxc
-  - containers
-  - unintended
 ---
 
-This blog post is a writeup of the Mischief machine from Hack the Box using the unintended LXC container privesc method.
+Write Up de la máquina Photobomp, máquina Linux!
 
 ## Linux / 10.10.10.92
 
