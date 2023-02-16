@@ -15,7 +15,7 @@ tags:
 
 Write Up de la máquina Photobomp, máquina Linux!
 
-## Linux / 10.10.10.92
+## Linux / 10.10.11.182
 
 ![](/assets/images/htb-writeup-photobomb/photobomp.png)
 
@@ -148,6 +148,8 @@ Acto seguido con el comando `stty raw -echo; fg` resetearemos la terminal con un
 ![IntrusionOK](/assets/images/htb-writeup-photobomb/IntrusionOK.png)
 
 Ya podemos visualizar la primera flag!
+
+![primeraFlag](/assets/images/htb-writeup-photobomb/primeraFlag.png)
 
 ### Escalada de privilegios
 
