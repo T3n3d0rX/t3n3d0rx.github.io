@@ -75,6 +75,7 @@ PORT   STATE SERVICE VERSION
 |_http-server-header: nginx/1.18.0 (Ubuntu)
 |_http-title: Did not follow redirect to http://photobomb.htb/
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+Password for 'https://t3n3d0rx@github.com': 
 
 Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
 Nmap done: 1 IP address (1 host up) scanned in 8.03 seconds
@@ -198,7 +199,7 @@ Vamos a crear un fichero con nombre `find` con dentro un `/bin/bash` en la ruta 
 
 ```
 
-wizard@photobomb:/dev/shm# cat find 
+wizard@photobomb:/dev/shm$ cat find 
 #!/bin/bash
 
 /bin/bash
