@@ -4,7 +4,7 @@ title: Photobomp - Hack The Box
 date: 2023-02-13
 classes: wide
 header:
-  teaser: /assets/images/htb-writeup-photobomb/photobomp.png
+  teaser: /assets/images/htb-writeup-photobomp/photobompcard.png
 categories:
   - hackthebox
   - infosec
